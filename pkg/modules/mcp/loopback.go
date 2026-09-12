@@ -96,8 +96,6 @@ func (t *tool) newRequest(ctx context.Context, ec *echo.Context, args map[string
 		switch {
 		case !isParam:
 			body[name] = raw
-		// A null body field clears it through merge-patch; a null parameter is simply unset.
-		case isJSONNull(raw):
 		case p.In == "path":
 			v, err := scalarString(raw)
 			if err != nil {
@@ -172,9 +170,6 @@ func requestID(ec *echo.Context) string {
 	return ec.Request().Header.Get(echo.HeaderXRequestID)
 }
 
-func isJSONNull(raw json.RawMessage) bool {
-	return bytes.Equal(bytes.TrimSpace(raw), []byte("null"))
-}
 func scalarString(raw json.RawMessage) (string, error) {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
