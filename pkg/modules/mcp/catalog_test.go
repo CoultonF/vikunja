@@ -30,7 +30,13 @@ func TestCatalogActions(t *testing.T) {
 	prev := routeAuthorizer
 	routeAuthorizer = func(_ *models.APIToken, path, _ string) bool { return path == "/things/:id" }
 	t.Cleanup(func() { routeAuthorizer = prev })
-	all := catalogActions(nil, "", "")
+	var catalog []*tool
+	for _, tl := range snapshotTools() {
+		if !tl.typed && tl.authorized(nil) {
+			catalog = append(catalog, tl)
+		}
+	}
+	all := catalogActions(catalog, "", "")
 	var names []string
 	for _, a := range all {
 		names = append(names, a.Name)
@@ -41,10 +47,10 @@ func TestCatalogActions(t *testing.T) {
 		"things_update",
 		"things_delete",
 	}, names)
-	one := catalogActions(nil, "things_read", "")
+	one := catalogActions(catalog, "things_read", "")
 	require.Len(t, one, 1)
 	assert.NotNil(t, one[0].InputSchema)
-	assert.Len(t, catalogActions(nil, "", "things"), 3)
+	assert.Len(t, catalogActions(catalog, "", "things"), 3)
 }
 
 func TestCatalogTools_RejectsUnknownArguments(t *testing.T) {

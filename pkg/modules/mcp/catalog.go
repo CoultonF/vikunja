@@ -24,8 +24,6 @@ import (
 	"slices"
 	"strings"
 
-	"code.vikunja.io/api/pkg/models"
-	"code.vikunja.io/api/pkg/modules/humabridge"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -98,19 +96,16 @@ func installCatalogTools(srv *mcp.Server, catalog []*tool) {
 		Name:        toolFindAction,
 		Description: "Discover additional Vikunja actions for: " + strings.Join(slices.Sorted(maps.Keys(areas)), ", ") + ". Returns only actions your token authorizes; pass action or resource for full input schemas. Invoke them with do_action.",
 		InputSchema: findActionSpec.schema,
-	}, findActionHandler)
+	}, findActionHandler(catalog))
 	srv.AddTool(&mcp.Tool{
 		Name:        toolDoAction,
 		Description: "Invoke an action discovered via find_action. Arguments must match its input_schema.",
 		InputSchema: doActionSpec.schema,
 	}, doActionHandler)
 }
-func catalogActions(token *models.APIToken, action, resource string) []actionInfo {
+func catalogActions(catalog []*tool, action, resource string) []actionInfo {
 	out := []actionInfo{}
-	for _, t := range snapshotTools() {
-		if t.typed || !t.authorized(token) {
-			continue
-		}
+	for _, t := range catalog {
 		if action != "" && t.name != action {
 			continue
 		}
@@ -134,21 +129,23 @@ func invalidArgsResult(name string, err error) *mcp.CallToolResult {
 		Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("mcp: invalid arguments for %s: %v", name, err)}},
 	}
 }
-func findActionHandler(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var args findActionArgs
-	if err := decodeToolArgs(findActionSpec, req.Params.Arguments, &args); err != nil {
-		//nolint:nilerr // Domain errors use MCP tool results.
-		return invalidArgsResult(toolFindAction, err), nil
+func findActionHandler(catalog []*tool) mcp.ToolHandler {
+	return func(_ context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var args findActionArgs
+		if err := decodeToolArgs(findActionSpec, req.Params.Arguments, &args); err != nil {
+			//nolint:nilerr // Domain errors use MCP tool results.
+			return invalidArgsResult(toolFindAction, err), nil
+		}
+		result := map[string]any{"actions": catalogActions(catalog, args.Action, args.Resource)}
+		body, err := json.Marshal(result)
+		if err != nil {
+			return nil, fmt.Errorf("mcp: marshal find_action result: %w", err)
+		}
+		return &mcp.CallToolResult{
+			Content:           []mcp.Content{&mcp.TextContent{Text: string(body)}},
+			StructuredContent: result,
+		}, nil
 	}
-	result := map[string]any{"actions": catalogActions(tokenFrom(humabridge.EchoContextFrom(ctx)), args.Action, args.Resource)}
-	body, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("mcp: marshal find_action result: %w", err)
-	}
-	return &mcp.CallToolResult{
-		Content:           []mcp.Content{&mcp.TextContent{Text: string(body)}},
-		StructuredContent: result,
-	}, nil
 }
 func doActionHandler(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	var args doActionArgs
