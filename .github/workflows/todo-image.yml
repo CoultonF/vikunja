@@ -18,7 +18,7 @@ permissions:
 env:
   # Bump the suffix (-todo.2, -todo.3, ...) for every change: tags are
   # immutable and the cluster pulls with imagePullPolicy: IfNotPresent.
-  VERSION: v2.6.0-todo.2
+  VERSION: v2.6.0-todo.3
 
 jobs:
   build:
