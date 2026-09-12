@@ -112,12 +112,13 @@ func TestMCP_Tools_RecordsTokenUsagePerCall(t *testing.T) {
 	t.Cleanup(func() { config.AuditEnabled.Set(false) })
 	c := newMCPClient(t, mcpFullToken)
 	events.ClearDispatchedEvents()
-	rec := c.post(fmt.Sprintf(`[%s,%s]`,
+	rec := c.post(fmt.Sprintf(`[%s,%s,%s]`,
 		`{"jsonrpc":"2.0","id":200,"method":"tools/call","params":{"name":"projects_read","arguments":{"id":1}}}`,
-		`{"jsonrpc":"2.0","id":201,"method":"tools/call","params":{"name":"projects_read","arguments":{"id":2}}}`,
+		`{"jsonrpc":"2.0","id":201,"method":"tools/call","params":{"name":"tasks_read","arguments":{"projecttask":1}}}`,
+		`{"jsonrpc":"2.0","id":202,"method":"tools/call","params":{"name":"tasks_read","arguments":{"projecttask":1,"expand":["reactions"]}}}`,
 	))
 	require.Equal(t, http.StatusOK, rec.Code, "%s", rec.Body.String())
-	// One usage for the MCP request itself plus one per tool call.
+	// One usage for the MCP request itself plus one per successful tool call; the scope-denied leg records none.
 	assert.Equal(t, 3, events.CountDispatchedEvents((&models.APITokenUsedEvent{}).Name()))
 }
 func TestMCP_Tools_ListEnvelopeAndFilter(t *testing.T) {

@@ -29,8 +29,6 @@ import (
 	"slices"
 	"strings"
 
-	"code.vikunja.io/api/pkg/config"
-	"code.vikunja.io/api/pkg/events"
 	"code.vikunja.io/api/pkg/log"
 	"code.vikunja.io/api/pkg/models"
 	"code.vikunja.io/api/pkg/modules/humabridge"
@@ -69,22 +67,14 @@ func callTool(ctx context.Context, name string, rawArgs json.RawMessage) (any, e
 	}
 	rec := httptest.NewRecorder()
 	currentAPI().Adapter().ServeHTTP(rec, req)
-	recordTokenUsage(ctx, token)
+	// The loopback runs as an internal dispatch, for which the auth middleware skips the usage event;
+	// a denied leg records none, just as the middleware dispatches nothing when the route check fails.
+	if rec.Code < 400 {
+		if err := models.RecordAPITokenUse(ctx, token); err != nil {
+			log.Errorf("[mcp] could not dispatch api token used event: %s", err)
+		}
+	}
 	return parseResponse(rec)
-}
-
-// The loopback runs as an internal dispatch, for which the auth middleware skips the usage event.
-func recordTokenUsage(ctx context.Context, token *models.APIToken) {
-	if token == nil || !config.AuditEnabled.GetBool() {
-		return
-	}
-	err := events.DispatchWithContext(ctx, &models.APITokenUsedEvent{
-		TokenID: token.ID,
-		OwnerID: token.OwnerID,
-	})
-	if err != nil {
-		log.Errorf("[mcp] could not dispatch api token used event: %s", err)
-	}
 }
 func (t *tool) newRequest(ctx context.Context, ec *echo.Context, args map[string]json.RawMessage) (*http.Request, error) {
 	caller := ec.Request()
