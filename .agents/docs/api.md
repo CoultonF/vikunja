@@ -5,6 +5,7 @@
 - `/api/v1` (Echo, `pkg/routes/api/v1/`) is frozen. It keeps running and is supported, but does not grow. Touch it only to fix a bug or to port a resource to v2.
 - `/api/v2` (Huma, `pkg/routes/api/v2/`) gets every new route: new entities, non-CRUD actions, new actions on existing resources. "Add an endpoint for X" without a version means v2.
 - Before adding a v2 route, invoke the `api-v2-routes` skill.
+- New v2 operations automatically become MCP catalog actions (`find_action`/`do_action`) unless their operation ID is denied in `pkg/modules/mcp/exposure.go`; update the pinned lists in `pkg/webtests/mcp_catalog_test.go` (`TestMCP_Catalog_ToolListsArePinned`) when adding one.
 - Models in `pkg/models/` are shared by both APIs. A new entity still gets a model with `Can*` methods (`crudable` skill); only the HTTP surface differs.
 
 ## Conventions
