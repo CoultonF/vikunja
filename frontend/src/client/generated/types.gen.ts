@@ -1854,7 +1854,11 @@ export type Status = {
      */
     readonly $schema?: string;
     /**
-     * Why the last migration failed. Empty when it succeeded, is still running or was never run.
+     * Why the last migration failed, as a key the client translates: "reported", "interrupted", "credentials", "queue", "upload" or "detail". Empty when it succeeded, is still running or was never run.
+     */
+    readonly error_kind?: string;
+    /**
+     * The failure detail, only set when error_kind is "detail": the migration failed on the user's own data and this is the error itself, in English.
      */
     readonly error_message?: string;
     /**
