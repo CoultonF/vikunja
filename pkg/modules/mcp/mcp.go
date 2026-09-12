@@ -49,8 +49,8 @@ const (
 
 // Register must follow apiv2.RegisterAll so tools pick up the AutoPatch operations.
 // allowOrigin (nil trusts none) admits the wildcard-port origins Vikunja's CORS config allows and the stdlib check does not.
-func Register(api huma.API, group *echo.Group, groupPrefix string, allowOrigin func(origin string) bool) {
-	initTools(api, groupPrefix)
+func Register(api huma.API, group *echo.Group, allowOrigin func(origin string) bool) {
+	initTools(api, apiv2.GroupPrefix)
 	streamableHandler = newStreamableHandler()
 	originProtection = http.NewCrossOriginProtection()
 	allowCORSOrigin = allowOrigin

@@ -484,7 +484,7 @@ func registerAPIRoutesV2(e *echo.Echo, a *echo.Group, noAuthRateLimit, refreshRa
 
 	// Resources self-register via init(); RegisterAll runs them all + AutoPatch.
 	apiv2.RegisterAll(api)
-	mcpmodule.Register(api, a, apiv2.GroupPrefix, corsOriginAllowed)
+	mcpmodule.Register(api, a, corsOriginAllowed)
 }
 
 func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.MiddlewareFunc) {
