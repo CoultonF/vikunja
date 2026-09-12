@@ -132,7 +132,7 @@ func newStreamableHandler() http.Handler {
 // handler rejects JWTs, which bypass API-token route scopes.
 func handler(c *echo.Context) error {
 	req := c.Request()
-	// MCP is not a browser transport, so a cross-origin browser request is rejected before the token is read.
+	// MCP is not a browser transport; the origin is checked before the body is read, after the token middleware has authenticated.
 	if err := originProtection.Check(req); err != nil && !originIsTrustedByCORS(req) {
 		return echo.NewHTTPError(http.StatusForbidden, err.Error())
 	}
