@@ -25,6 +25,7 @@ import (
 	"code.vikunja.io/api/pkg/models"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/autopatch"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -89,10 +90,12 @@ func TestBuildToolSpec_Patch(t *testing.T) {
 	assert.Equal(t, []string{"id"}, spec.schema.Required)
 	assert.Contains(t, spec.schema.Properties, "title")
 	assert.NotContains(t, spec.schema.Properties, "owner")
+	// minLength:1 on the PUT shape: a null would merge-patch the title away to "".
+	assert.Equal(t, "string", spec.schema.Properties["title"].Type)
 	assert.ElementsMatch(t, []string{
 		"string",
 		"null",
-	}, spec.schema.Properties["title"].Types)
+	}, spec.schema.Properties["description"].Types)
 	reminders := spec.schema.Properties["reminders"]
 	require.NotNil(t, reminders)
 	require.NotNil(t, reminders.Items)
@@ -269,4 +272,40 @@ func TestBuildToolSpec_TaskCreationRequiresTitle(t *testing.T) {
 		func(_ context.Context, _ *struct{ Body models.Task }) (*struct{}, error) { return nil, nil })
 	spec := specFor(t, api, http.MethodPost, "/tasks")
 	assert.Equal(t, []string{"title"}, spec.schema.Required)
+}
+
+func TestBuildToolSpec_PatchKeepsRequiredFieldsNonNullable(t *testing.T) {
+	cfg := huma.DefaultConfig("test", "1")
+	cfg.FieldsOptionalByDefault = true
+	_, api := humatest.New(t, cfg)
+	type gadget struct {
+		Title string `json:"title" required:"true"`
+		Note  string `json:"note"`
+	}
+	huma.Register(api, huma.Operation{
+		OperationID: "gadgets-read",
+		Method:      http.MethodGet,
+		Path:        "/gadgets/{id}",
+	}, func(_ context.Context, _ *struct {
+		ID int64 `path:"id"`
+	}) (*struct{ Body gadget }, error) {
+		return nil, nil
+	})
+	huma.Register(api, huma.Operation{
+		OperationID: "gadgets-update",
+		Method:      http.MethodPut,
+		Path:        "/gadgets/{id}",
+	}, func(_ context.Context, _ *struct {
+		ID   int64 `path:"id"`
+		Body gadget
+	}) (*struct{}, error) {
+		return nil, nil
+	})
+	autopatch.AutoPatch(api)
+	spec := specFor(t, api, http.MethodPatch, "/gadgets/{id}")
+	assert.Equal(t, "string", spec.schema.Properties["title"].Type)
+	assert.ElementsMatch(t, []string{
+		"string",
+		"null",
+	}, spec.schema.Properties["note"].Types)
 }

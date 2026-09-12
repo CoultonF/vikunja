@@ -83,7 +83,7 @@ func buildToolSpec(oapi *huma.OpenAPI, op *huma.Operation) (*toolSpec, error) {
 			if err != nil {
 				return nil, fmt.Errorf("mcp: %s: body property %s: %w", op.OperationID, name, err)
 			}
-			if op.Method == http.MethodPatch {
+			if op.Method == http.MethodPatch && !mustHaveValue(ps, slices.Contains(body.Required, name)) {
 				ps = allowNull(ps)
 			}
 			props[name] = ps
@@ -140,6 +140,18 @@ func boundToPathParams(oapi *huma.OpenAPI, body *huma.Schema, params map[string]
 		}
 	})
 	return out
+}
+
+// Merge-patch deletes a key sent as null, so the field falls back to its zero value instead of failing validation.
+func mustHaveValue(s *jsonschema.Schema, required bool) bool {
+	switch {
+	case required,
+		s.MinLength != nil && *s.MinLength > 0,
+		s.Minimum != nil,
+		len(s.Enum) > 0:
+		return true
+	}
+	return false
 }
 
 // Merge-patch clears a field by sending null; the shape read from the PUT does not allow it.

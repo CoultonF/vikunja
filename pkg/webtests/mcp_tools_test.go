@@ -96,6 +96,17 @@ func TestMCP_Tools_NullClearsAndUnsets(t *testing.T) {
 	listed := c.callTool("tasks_list", map[string]any{"filter": nil})
 	assert.NotContains(t, listed, "isError", toolResultText(t, listed))
 }
+func TestMCP_Tools_NullOnAConstrainedFieldIsError(t *testing.T) {
+	c := newMCPClient(t, mcpFullToken)
+	res := c.callTool("tasks_update", map[string]any{
+		"projecttask": 1,
+		"title":       nil,
+	})
+	assert.Equal(t, true, res["isError"])
+	text := toolResultText(t, res)
+	assert.Contains(t, text, "invalid arguments")
+	assert.Contains(t, text, "title")
+}
 func TestMCP_Tools_RecordsTokenUsagePerCall(t *testing.T) {
 	config.AuditEnabled.Set(true)
 	t.Cleanup(func() { config.AuditEnabled.Set(false) })
