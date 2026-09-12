@@ -129,6 +129,7 @@ func TestBuildToolSpec_PutKeepsRequiredBodyFields(t *testing.T) {
 type widgetBody struct {
 	ThingID  int64  `json:"thing_id" param:"thing"`
 	Username string `json:"username" param:"user"`
+	Mode     string `json:"mode_name" param:"mode"`
 	Title    string `json:"title"`
 }
 
@@ -143,6 +144,7 @@ func TestBuildToolSpec_DropsBodyFieldSuppliedByPath(t *testing.T) {
 	}, func(_ context.Context, _ *struct {
 		Thing int64  `path:"thing"`
 		User  string `path:"user"`
+		Mode  string `query:"mode"`
 		Body  widgetBody
 	}) (*struct{}, error) {
 		return nil, nil
@@ -151,6 +153,7 @@ func TestBuildToolSpec_DropsBodyFieldSuppliedByPath(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, spec.schema.Properties, "thing_id")
 	assert.NotContains(t, spec.schema.Properties, "username")
+	assert.Contains(t, spec.schema.Properties, "mode_name")
 	assert.Contains(t, spec.schema.Properties, "title")
 }
 func TestBuildToolSpec_KeepsBodyFieldNotInThePath(t *testing.T) {
