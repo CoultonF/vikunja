@@ -24,6 +24,7 @@ import (
 )
 
 type migrationStatusError20260911193552 struct {
+	ErrorKind    string `xorm:"varchar(50) null"`
 	ErrorMessage string `xorm:"text null"`
 }
 
@@ -33,7 +34,7 @@ func (migrationStatusError20260911193552) TableName() string {
 
 func addMigrationStatusError20260911193552(tx *xorm.Engine) error {
 	if err := partialSync(tx, migrationStatusError20260911193552{}); err != nil {
-		return fmt.Errorf("could not add error_message to migration_status: %w", err)
+		return fmt.Errorf("could not add error_kind and error_message to migration_status: %w", err)
 	}
 	return nil
 }
@@ -41,7 +42,7 @@ func addMigrationStatusError20260911193552(tx *xorm.Engine) error {
 func init() {
 	migrations = append(migrations, &xormigrate.Migration{
 		ID:          "20260911193552",
-		Description: "Add error_message to migration_status so a finished migration says whether it succeeded",
+		Description: "Add error_kind and error_message to migration_status so a finished migration says whether and why it failed",
 		Migrate:     addMigrationStatusError20260911193552,
 		Rollback: func(_ *xorm.Engine) error {
 			return nil

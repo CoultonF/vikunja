@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The migration struct only declares the added column, so reads need the full row.
+// The migration struct only declares the added columns, so reads need the full row.
 type migrationStatusErrorRow20260911193552 struct {
 	ID           int64     `xorm:"bigint autoincr not null unique pk"`
 	UserID       int64     `xorm:"bigint not null"`
@@ -33,6 +33,7 @@ type migrationStatusErrorRow20260911193552 struct {
 	StartedAt    time.Time `xorm:"not null"`
 	FinishedAt   time.Time `xorm:"null"`
 	ActiveUserID *int64    `xorm:"bigint null unique"`
+	ErrorKind    string    `xorm:"varchar(50) null"`
 	ErrorMessage string    `xorm:"text null"`
 }
 
@@ -67,6 +68,7 @@ func TestAddMigrationStatusError20260911193552(t *testing.T) {
 	require.NoError(t, addMigrationStatusError20260911193552(x))
 
 	after := migrationStatusTable20260830162731(t, x)
+	require.NotNil(t, after.GetColumn("error_kind"))
 	require.NotNil(t, after.GetColumn("error_message"))
 	for _, column := range before.ColumnsSeq() {
 		require.NotNilf(t, after.GetColumn(column), "migration dropped column %s", column)
@@ -85,7 +87,8 @@ func TestAddMigrationStatusError20260911193552(t *testing.T) {
 	require.Equal(t, int64(42), got.UserID)
 	require.Equal(t, "todoist", got.MigratorName)
 	require.WithinDuration(t, startedAt, got.StartedAt, time.Second)
-	require.Empty(t, got.ErrorMessage, "rows migrated from before the column must not read as failed")
+	require.Empty(t, got.ErrorKind, "rows migrated from before the columns must not read as failed")
+	require.Empty(t, got.ErrorMessage)
 
 	activeUserID := int64(7)
 	_, err = x.Insert(&migrationStatusErrorRow20260911193552{

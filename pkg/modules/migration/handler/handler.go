@@ -72,7 +72,7 @@ func StartMigration(ms migration.Migrator, u *user2.User) error {
 
 	if cc, ok := ms.(migration.CredentialsChecker); ok {
 		if err := cc.CheckCredentials(); err != nil {
-			failClaim(status, u, "failed credential check", credentialFailureMessage)
+			failClaim(status, u, "failed credential check", migration.ErrorKindCredentials)
 			return err
 		}
 	}
@@ -83,23 +83,16 @@ func StartMigration(ms migration.Migrator, u *user2.User) error {
 		User:              u,
 		MigrationStatusID: status.ID,
 	}); err != nil {
-		failClaim(status, u, "failed event dispatch", queueFailureMessage)
+		failClaim(status, u, "failed event dispatch", migration.ErrorKindQueue)
 		return err
 	}
 
 	return nil
 }
 
-const (
-	credentialFailureMessage = "The credentials for this service could not be verified, please connect it again."
-	queueFailureMessage      = "The migration could not be queued, please start it again."
-	uploadFailureMessage     = "The uploaded import file could not be stored, please upload it again."
-)
-
-// failClaim releases the claim of a migration that never got going. logReason is for us,
-// userMessage ends up on the status endpoint, so it must not carry internals such as spool paths.
-func failClaim(status *migration.Status, u *user2.User, logReason, userMessage string) {
-	if ferr := migration.FailMigration(status, userMessage); ferr != nil {
+// failClaim releases the claim of a migration that never got going; logReason only reaches our log.
+func failClaim(status *migration.Status, u *user2.User, logReason string, kind migration.ErrorKind) {
+	if ferr := migration.FailMigration(status, kind); ferr != nil {
 		log.Errorf("[Migration] Could not release claim of migration %d for user %d after %s: %s", status.ID, u.ID, logReason, ferr)
 	}
 }

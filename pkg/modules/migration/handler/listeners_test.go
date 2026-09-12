@@ -187,10 +187,11 @@ func assertClaimReleased(t *testing.T, statusID int64) {
 	assert.Nil(t, status.ActiveUserID)
 }
 
-func assertMigrationOutcome(t *testing.T, statusID int64, wantErrorMessage string) {
+func assertMigrationOutcome(t *testing.T, statusID int64, wantErrorKind migration.ErrorKind, wantErrorMessage string) {
 	t.Helper()
 	status, err := migration.GetMigrationStatusByID(statusID)
 	require.NoError(t, err)
+	assert.Equal(t, wantErrorKind, status.ErrorKind)
 	assert.Equal(t, wantErrorMessage, status.ErrorMessage)
 }
 
@@ -241,7 +242,7 @@ func TestFileMigrationListenerImportsSpooledUpload(t *testing.T) {
 
 	notifications.AssertSent(t, &MigrationDoneNotification{})
 	assertClaimReleased(t, status.ID)
-	assertMigrationOutcome(t, status.ID, "")
+	assertMigrationOutcome(t, status.ID, "", "")
 	assertSpoolRemoved(t, uploadName)
 }
 
@@ -270,7 +271,7 @@ func TestFileMigrationListenerFailedImportReleasesClaim(t *testing.T) {
 	assert.Equal(t, "some export", string(state.content))
 	notifications.AssertSent(t, &MigrationFailedNotification{})
 	assertClaimReleased(t, status.ID)
-	assertMigrationOutcome(t, status.ID, "import broke")
+	assertMigrationOutcome(t, status.ID, migration.ErrorKindDetail, "import broke")
 	assertSpoolRemoved(t, uploadName)
 }
 
@@ -297,7 +298,7 @@ func TestFileMigrationListenerAppliesOptions(t *testing.T) {
 	assert.JSONEq(t, `{"delimiter":";"}`, string(state.options))
 	assert.Equal(t, 1, state.runs)
 	assertClaimReleased(t, status.ID)
-	assertMigrationOutcome(t, status.ID, "")
+	assertMigrationOutcome(t, status.ID, "", "")
 }
 
 func TestFileMigrationListenerUnregisteredKindReleasesClaim(t *testing.T) {
@@ -319,7 +320,7 @@ func TestFileMigrationListenerUnregisteredKindReleasesClaim(t *testing.T) {
 	}, &FileMigrationListener{})
 
 	assertClaimReleased(t, status.ID)
-	assertMigrationOutcome(t, status.ID, migration.GenericFailureMessage)
+	assertMigrationOutcome(t, status.ID, migration.ErrorKindReported, "")
 	assertSpoolRemoved(t, uploadName)
 }
 
@@ -422,11 +423,11 @@ func TestFileMigrationListenerReportedFailureStoresGenericMessage(t *testing.T) 
 
 	notifications.AssertSent(t, &MigrationFailedReportedNotification{})
 	assertClaimReleased(t, status.ID)
-	assertMigrationOutcome(t, status.ID, migration.GenericFailureMessage)
+	assertMigrationOutcome(t, status.ID, migration.ErrorKindReported, "")
 
 	stored, err := migration.GetMigrationStatusByID(status.ID)
 	require.NoError(t, err)
-	assert.NotContains(t, stored.ErrorMessage, "/var/lib/vikunja")
+	assert.NotContains(t, string(stored.ErrorKind)+stored.ErrorMessage, "/var/lib/vikunja")
 	assertSpoolRemoved(t, uploadName)
 }
 
@@ -460,16 +461,19 @@ func TestFileMigrationListenerUserFacingStatusDistinguishesOutcomes(t *testing.T
 	succeeded, err := migration.GetMigrationStatus(&stubFileMigrator{name: "outcome-ok-stub"}, u)
 	require.NoError(t, err)
 	assert.False(t, succeeded.FinishedAt.IsZero())
+	assert.Empty(t, succeeded.ErrorKind)
 	assert.Empty(t, succeeded.ErrorMessage)
 
 	failed, err := migration.GetMigrationStatus(&stubFileMigrator{name: "outcome-failed-stub"}, u)
 	require.NoError(t, err)
 	assert.False(t, failed.FinishedAt.IsZero())
+	assert.Equal(t, migration.ErrorKindDetail, failed.ErrorKind)
 	assert.Equal(t, "the import file is missing a VERSION entry", failed.ErrorMessage)
 
 	body, err := json.Marshal(failed)
 	require.NoError(t, err)
 	var wire map[string]interface{}
 	require.NoError(t, json.Unmarshal(body, &wire))
+	assert.Equal(t, "detail", wire["error_kind"])
 	assert.Equal(t, "the import file is missing a VERSION entry", wire["error_message"])
 }

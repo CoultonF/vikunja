@@ -180,16 +180,16 @@
 		>
 			<Message
 				ref="resultMessage"
-				:variant="importFailureReason ? 'danger' : 'info'"
+				:variant="migrationStore.hasFailed ? 'danger' : 'info'"
 				role="status"
 				aria-live="polite"
 				tabindex="-1"
 				class="mbe-4"
 			>
-				<template v-if="importFailureReason">
-					{{ $t('migrate.migrationFailed', {service: 'CSV', reason: importFailureReason}) }}
+				<template v-if="migrationStore.hasFailed">
+					{{ $t(migrationStore.failureKey, {service: 'CSV', reason: migrationStore.errorMessage}) }}
 				</template>
-				<template v-else-if="importFinished">
+				<template v-else-if="migrationStore.isFinished">
 					{{ $t('migrate.migrationFinished', {service: 'CSV'}) }}
 				</template>
 				<template v-else>
@@ -221,7 +221,7 @@ import CSVMigrationService, {
 } from '@/services/migrator/csvMigration'
 
 import {useTitle} from '@/composables/useTitle'
-import {useMigrationCompletion} from '@/composables/useMigrationCompletion'
+import {useMigrationStore} from '@/stores/migration'
 import {getErrorText} from '@/message'
 
 type Step = 'upload' | 'mapping' | 'success'
@@ -232,11 +232,7 @@ useTitle(() => t('migrate.titleService', {name: 'CSV'}))
 
 const csvService = shallowReactive(new CSVMigrationService())
 
-const {
-	isFinished: importFinished,
-	errorMessage: importFailureReason,
-	start: startPolling,
-} = useMigrationCompletion(() => csvService)
+const migrationStore = useMigrationStore()
 
 const step = ref<Step>('upload')
 const error = ref('')
@@ -384,7 +380,7 @@ async function performImport() {
 
 	try {
 		await csvService.migrate(selectedFile.value, config.value)
-		startPolling()
+		migrationStore.start(csvService)
 		step.value = 'success'
 	} catch (e) {
 		error.value = getErrorText(e)

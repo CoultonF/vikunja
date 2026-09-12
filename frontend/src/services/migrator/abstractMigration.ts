@@ -6,9 +6,14 @@ export type MigrationConfig =
 	| { url: string, token: string }
 	| { url: string, username: string, password: string }
 
+// '' means no failure. Anything but 'detail' is a closed set the frontend translates itself;
+// 'detail' carries untranslatable text from the user's own data in error_message.
+export type MigrationErrorKind = '' | 'reported' | 'interrupted' | 'credentials' | 'queue' | 'upload' | 'detail'
+
 export interface MigrationStatus {
 	started_at: string | null
 	finished_at: string | null
+	error_kind: MigrationErrorKind
 	error_message: string
 }
 

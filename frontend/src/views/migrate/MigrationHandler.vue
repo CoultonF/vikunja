@@ -95,16 +95,16 @@
 		<div v-else>
 			<Message
 				ref="resultMessage"
-				:variant="migrationFailureReason ? 'danger' : 'info'"
+				:variant="migrationStore.hasFailed ? 'danger' : 'info'"
 				role="status"
 				aria-live="polite"
 				tabindex="-1"
 				class="mbe-4"
 			>
-				<template v-if="migrationFailureReason">
-					{{ $t('migrate.migrationFailed', {service: migrator.name, reason: migrationFailureReason}) }}
+				<template v-if="migrationStore.hasFailed">
+					{{ $t(migrationStore.failureKey, {service: migrator.name, reason: migrationStore.errorMessage}) }}
 				</template>
-				<template v-else-if="migrationFinished">
+				<template v-else-if="migrationStore.isFinished">
 					{{ $t('migrate.migrationFinished', {service: migrator.name}) }}
 				</template>
 				<template v-else>
@@ -145,7 +145,7 @@ import {parseDateOrNull} from '@/helpers/parseDateOrNull'
 
 import {MIGRATORS, type Migrator} from './migrators'
 import {useTitle} from '@/composables/useTitle'
-import {useMigrationCompletion} from '@/composables/useMigrationCompletion'
+import {useMigrationStore} from '@/stores/migration'
 import {getErrorText} from '@/message'
 
 const props = defineProps<{
@@ -185,11 +185,7 @@ useTitle(() => t('migrate.titleService', {name: migrator.value.name}))
 
 const statusSource = () => migrator.value.isFileMigrator ? migrationFileService : migrationService
 
-const {
-	isFinished: migrationFinished,
-	errorMessage: migrationFailureReason,
-	start: startPolling,
-} = useMigrationCompletion(statusSource)
+const migrationStore = useMigrationStore()
 
 async function initMigration() {
 	if (!migrator.value.isFileMigrator && !migrator.value.isCredentialsMigrator) {
@@ -210,7 +206,7 @@ async function initMigration() {
 
 	if (parseDateOrNull(started_at) !== null && finishedAt === null) {
 		migrationRunning.value = true
-		startPolling()
+		migrationStore.start(statusSource())
 		return
 	}
 
@@ -265,7 +261,7 @@ async function migrate(credentialsConfig?: MigrationConfig) {
 			await migrationService.migrate(migrationConfig as MigrationConfig)
 		}
 		migrationRunning.value = true
-		startPolling()
+		migrationStore.start(statusSource())
 	} catch (e) {
 		migrationError.value = getErrorText(e)
 	} finally {

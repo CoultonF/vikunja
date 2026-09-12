@@ -53,9 +53,9 @@ func RegisterFileMigrator(factory func() migration.FileMigrator) {
 	registeredFileMigrators[factory().Name()] = factory
 }
 
-// It returns as soon as the job is queued: an import of a large export runs for
-// minutes, far longer than a reverse proxy will hold a request open, and a
-// client that gives up waiting cannot abort the import it started.
+// StartFileMigration returns as soon as the job is queued: an import of a large
+// export runs for minutes, far longer than a reverse proxy will hold a request
+// open, and a client that gives up waiting cannot abort the import it started.
 func StartFileMigration(ms migration.FileMigrator, u *user2.User, file io.ReaderAt, size int64, options []byte) error {
 	// The listener applies these again on its own instance; doing it here too
 	// turns an unusable config into a failed request instead of a failed job.
@@ -77,12 +77,12 @@ func StartFileMigration(ms migration.FileMigrator, u *user2.User, file io.Reader
 
 	uploadName, uploadSize, err := migration.SpoolUpload(io.NewSectionReader(file, 0, size))
 	if err != nil {
-		failClaim(status, u, "failed upload spooling", uploadFailureMessage)
+		failClaim(status, u, "failed upload spooling", migration.ErrorKindUpload)
 		return err
 	}
 	if uploadSize != size {
 		migration.RemoveSpooledUpload(uploadName)
-		failClaim(status, u, "short upload spooling", uploadFailureMessage)
+		failClaim(status, u, "short upload spooling", migration.ErrorKindUpload)
 		return fmt.Errorf("spooled %d bytes of the %d byte upload", uploadSize, size)
 	}
 
@@ -95,7 +95,7 @@ func StartFileMigration(ms migration.FileMigrator, u *user2.User, file io.Reader
 		Options:           options,
 	}); err != nil {
 		migration.RemoveSpooledUpload(uploadName)
-		failClaim(status, u, "failed event dispatch", queueFailureMessage)
+		failClaim(status, u, "failed event dispatch", migration.ErrorKindQueue)
 		return err
 	}
 
