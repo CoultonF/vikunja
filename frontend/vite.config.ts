@@ -175,17 +175,17 @@ function getBuildConfig(env: Record<string, string>) {
 					theme_color: '#1973ff',
 					icons: [
 						{
-							src: './images/icons/android-chrome-192x192.png?v=2',
+							src: './images/icons/android-chrome-192x192.png?v=3',
 							sizes: '192x192',
 							type: 'image/png',
 						},
 						{
-							src: './images/icons/android-chrome-512x512.png?v=2',
+							src: './images/icons/android-chrome-512x512.png?v=3',
 							sizes: '512x512',
 							type: 'image/png',
 						},
 						{
-							src: './images/icons/icon-maskable.png?v=2',
+							src: './images/icons/icon-maskable.png?v=3',
 							sizes: '1024x1024',
 							type: 'image/png',
 							purpose: 'maskable',

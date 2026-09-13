@@ -72,7 +72,13 @@
 			<h3 class="has-text-centered mbs-6">
 				{{ $t('task.show.noTasks') }}
 			</h3>
-			<DogCool class="dog-cool" />
+			<img
+				:src="lunaFullBody"
+				class="luna-full-body"
+				alt=""
+				width="265"
+				height="313"
+			>
 		</template>
 
 		<Card
@@ -120,7 +126,7 @@ import SingleTaskInProject from '@/components/tasks/partials/SingleTaskInProject
 import DatepickerWithRange from '@/components/date/DatepickerWithRange.vue'
 import XLabel from '@/components/tasks/partials/Label.vue'
 import {DATE_RANGES} from '@/components/date/dateRanges'
-import DogCool from '@/assets/dog-cool.svg?component'
+import lunaFullBody from '@/assets/luna-full-body.webp'
 import type {ITask} from '@/modelTypes/ITask'
 import {useAuthStore} from '@/stores/auth'
 import {useTaskStore} from '@/stores/tasks'
@@ -329,7 +335,7 @@ watchEffect(() => setTitle(pageTitle.value))
 	flex-direction: column;
 }
 
-.dog-cool {
+.luna-full-body {
 	margin: 3rem auto 0;
 	display: block;
 }

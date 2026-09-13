@@ -84,8 +84,9 @@ useTitle(() => title.value)
 
 <style lang="scss" scoped>
 .no-auth-wrapper {
-	background: var(--site-background) url("@/assets/dog-front.svg?url") no-repeat
+	background: var(--site-background) url("@/assets/luna-portrait.webp") no-repeat
 		fixed bottom left;
+	background-size: 194px auto;
 	min-block-size: 100vh;
 	display: flex;
 	flex-direction: column;
